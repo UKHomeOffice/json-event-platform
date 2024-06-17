@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Real time website</title>
+
+    <script type="application/javascript">
+
+      function setOnline() {
+        document.getElementById('online').classList.remove('hidden');
+        document.getElementById('offline').classList.add('hidden');
+      }
+
+      function setOffline() {
+        document.getElementById('online').classList.add('hidden');
+        document.getElementById('offline').classList.remove('hidden');
+      }
+
+      function addMessage(msg) {
+        var item = document.createElement('li');
+        const timestamp = new Date().toISOString().replace('T',' ').replace('Z','');
+        item.innerText = '[' + timestamp + '] ' + msg;
+        document.getElementById('content').appendChild(item);
+      }
+
+      var socket = null;
+
+      function silentReconnect() {
+        setTimeout(connect, 5000);
+      }
+
+      function connect() {
+
+        socket = new WebSocket("ws://localhost:8080/ws");
+        setOnline();
+
+        socket.onmessage = function (event) {
+          addMessage(event.data);
+        };
+
+        socket.onclose = function (event) {
+          addMessage("[closed] server connection ended");
+          setOffline();
+          silentReconnect();
+        };
+
+        socket.onerror = function (error) {
+          addMessage("[Error] An error occured while processing data: " + error.data);
+          setOffline();
+          silentReconnect();
+        };
+      }
+
+      function sendMessage() {
+        const authToken = document.getElementById('authToken').value;
+        const message = document.getElementById('message').value;
+        socket.send(JSON.stringify({ "messageType" : "broadcast", "authToken" : authToken, "message" : message }));
+      }
+
+    </script>
+
+    <style>
+
+      .hidden { visibility: hidden; }
+
+      li {
+        border: solid 1px black;
+        margin: 4px;
+        padding: 4px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <button onClick="connect()">Connect</button>
+    <span id="offline">&#x1f7e0; Offline</span>
+    <span id="online" class="hidden">&#x1f7e2; Online</span>
+    <ol id="content">
+    </ol>
+    <div>
+      Auth Token: <input type="text" id="authToken" value="test"/> Broadcast Message: <input type="text" id="message"><button onClick="sendMessage()">Broadcast</button>
+    </div>
+  </body>
+</html>
